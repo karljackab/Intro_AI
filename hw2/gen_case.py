@@ -45,4 +45,5 @@ def gen_case(x_size, y_size, mines_num, hint_num):
             
     print()
 
-gen_case(4, 4, 4, 4)
+if __name__ == '__main__':
+    gen_case(4, 4, 5, 4)
