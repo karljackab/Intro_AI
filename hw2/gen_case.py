@@ -2,6 +2,7 @@ import random
 
 def gen_case(x_size, y_size, mines_num, hint_num):
     board = []
+    res = ''
     for _ in range(y_size):
         board.append([])
         for _ in range(x_size):
@@ -34,16 +35,20 @@ def gen_case(x_size, y_size, mines_num, hint_num):
     #     print()
 
     print(f'{x_size} {y_size} {mines_num}',end=' ')
+    res = f'{x_size} {y_size} {mines_num} '
     for y in range(y_size):
         for x in range(x_size):
             if type(board[y][x]) == int:
                 print(f'{board[y][x]}',end='')
+                res += f'{board[y][x]}'
             else:
                 print('-1',end='')
+                res += '-1'
             if x != x_size-1 or y != y_size-1:
                 print(' ',end='')
-            
+                res += ' '
     print()
+    return res
 
 if __name__ == '__main__':
     gen_case(4, 4, 5, 4)
