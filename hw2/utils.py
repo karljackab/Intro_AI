@@ -1,3 +1,5 @@
+## utils.py
+
 import copy
 
 def add_constraint(constraints, constraint_list, x_idx, y_idx, board, x_size, y_size):
@@ -87,6 +89,7 @@ def check_avail(board, domains, constraint_list, just_calc=False):
             if not just_calc:
                 return False, history
             else:
+                reverse_domain_hist(domains, history)
                 return False, out_cnt
 
         if upper_bound == tar_value:    ## set all domains to upper bound value
@@ -96,10 +99,9 @@ def check_avail(board, domains, constraint_list, just_calc=False):
                     if not domains[node][1]:
                         continue
                     if domains[node][0][1] and domains[node][0][0]:
-                        if not just_calc:
-                            history.append((node, 0))
-                            domains[node][0][0] = False
-                        else:
+                        history.append((node, 0))
+                        domains[node][0][0] = False
+                        if just_calc:
                             out_cnt += 1
 
         if lower_bound == tar_value:    ## set all domains to lower bound value
@@ -109,14 +111,14 @@ def check_avail(board, domains, constraint_list, just_calc=False):
                     if not domains[node][1]:
                         continue
                     if domains[node][0][0] and domains[node][0][1]:
-                        if not just_calc:
-                            history.append((node, 1))
-                            domains[node][0][1] = False
-                        else:
+                        history.append((node, 1))
+                        domains[node][0][1] = False
+                        if just_calc:
                             out_cnt += 1
     if not just_calc:
         return True, history
     else:
+        reverse_domain_hist(domains, history)
         return True, out_cnt
 
 def reverse_domain_hist(domains, history):

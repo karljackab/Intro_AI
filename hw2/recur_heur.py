@@ -1,14 +1,19 @@
+## recur_heur.py
+
 import utils
 
+expanded_node_cnt = 0
+
 ## Without heuristic version
-def simple(cur_board, cur_domains, constraints, constraint_list, changed_node, forward_check, node_num):
+def simple(cur_board, cur_domains, constraints, constraint_list, changed_node, forward_check):
+    global expanded_node_cnt
     ## Do forward checking, only check the constraints which affect changed node
     if changed_node is not None and forward_check:
         check_res, history = utils.check_avail(cur_board, cur_domains, constraints[changed_node])
         ## If checking fail, reverse the changed domain, and back to previous node
         if not check_res:
             utils.reverse_domain_hist(cur_domains, history)
-            return None, node_num
+            return None
     
     ## If all domains has assigned (reach the leaf), check whether it's acceptable
     ## If failed, reverse and go back to previous node
@@ -17,36 +22,41 @@ def simple(cur_board, cur_domains, constraints, constraint_list, changed_node, f
         if not utils.check_accept(cur_board, constraint_list):
             if forward_check:
                 utils.reverse_domain_hist(cur_domains, history)
-            return None, node_num
+            return None
         else:
-            return cur_board, node_num
+            return cur_board
 
-    ## Expand nodes in sequence without heuristic
-    for (new_x, new_y) in cur_domains.keys():
-        ## If the node has assigned, continue
-        if not cur_domains[(new_x, new_y)][1]:
+    ## Find the node which hasn't assigned
+    for (x, y) in cur_domains.keys():
+        if not cur_domains[(x, y)][1]:
             continue
-        domain, _ = cur_domains[(new_x, new_y)]
-        for new_val, available in enumerate(domain):
-            ## If the domain value is available
-            if available:
-                cur_domains[(new_x, new_y)][1] = False
-                cur_board[new_y][new_x] = new_val
-                res, node_num = simple(cur_board, cur_domains, constraints, constraint_list, (new_x, new_y), forward_check, node_num+1)
-                ## If it has solution, return it
-                if res is not None:
-                    return res, node_num
-                ## Go back to previous status
-                cur_domains[(new_x, new_y)][1] = True
-                cur_board[new_y][new_x] = 0
+        new_x, new_y = x, y
+        break
+
+    ## Expand node
+    expanded_node_cnt += 1
+    domain, _ = cur_domains[(new_x, new_y)]
+    for new_val, available in enumerate(domain):
+        ## If the domain value is available
+        if available:
+            cur_domains[(new_x, new_y)][1] = False
+            cur_board[new_y][new_x] = new_val
+            res = simple(cur_board, cur_domains, constraints, constraint_list, (new_x, new_y), forward_check)
+            ## If it has solution, return it
+            if res is not None:
+                return res
+            ## Go back to previous status
+            cur_domains[(new_x, new_y)][1] = True
+            cur_board[new_y][new_x] = 0
 
     ## Reverse changed by forward checking
-    if forward_check:
+    if changed_node is not None and forward_check:
         utils.reverse_domain_hist(cur_domains, history)
     
-    return None, node_num
+    return None
 
-def MRV(cur_board, cur_domains, constraints, constraint_list, changed_node, forward_check, node_num):
+def MRV(cur_board, cur_domains, constraints, constraint_list, changed_node, forward_check):
+    global expanded_node_cnt
     ## Do forward checking, only check the constraints which affect changed node
     if changed_node is not None and forward_check:
         check_res, history = utils.check_avail(cur_board, cur_domains, constraints[changed_node])
@@ -54,7 +64,7 @@ def MRV(cur_board, cur_domains, constraints, constraint_list, changed_node, forw
         ## If checking fail, reverse the changed domain, and back to previous node
         if not check_res:
             utils.reverse_domain_hist(cur_domains, history)
-            return None, node_num
+            return None
     
     ## If all domains has assigned (reach the leaf), check whether it's acceptable
     ## If failed, reverse and go back to previous node
@@ -63,45 +73,47 @@ def MRV(cur_board, cur_domains, constraints, constraint_list, changed_node, forw
         if not utils.check_accept(cur_board, constraint_list):
             if forward_check:
                 utils.reverse_domain_hist(cur_domains, history)
-            return None, node_num
+            return None
         else:
-            return cur_board, node_num
+            return cur_board
 
-    ## calculate the domains for every non assigned node, and sort it in increasing order
-    priority_seq = []
+    ## Choose the node to expand which has minimum available domain
+    new_node, min_avail_num = None, -1
     for (new_x, new_y) in cur_domains.keys():
         if not cur_domains[(new_x, new_y)][1]:
             continue
         avail_num = sum(cur_domains[(new_x, new_y)][0])
-        priority_seq.append(((new_x, new_y), avail_num))
-    priority_seq = sorted(priority_seq, key=lambda x: x[1])
-
+        if avail_num < min_avail_num or min_avail_num == -1:
+            new_node, min_avail_num = (new_x, new_y), avail_num
+    
     ## Expand nodes in priority sequence
-    for node in priority_seq:
-        (new_x, new_y) = node[0]
-        domain, _ = cur_domains[(new_x, new_y)]
-        for new_val, available in enumerate(domain):
-            ## If the domain value is available
-            if available:
-                cur_domains[(new_x, new_y)][1] = False
-                cur_board[new_y][new_x] = new_val
-                res, node_num = MRV(cur_board, cur_domains, constraints, constraint_list, (new_x, new_y), forward_check, node_num+1)
+    expanded_node_cnt += 1
+    new_x, new_y = new_node
+    domain, _ = cur_domains[(new_x, new_y)]
+    for new_val, available in enumerate(domain):
+        ## If the domain value is available
+        if available:
+            cur_domains[(new_x, new_y)][1] = False
+            cur_board[new_y][new_x] = new_val
+            res = MRV(cur_board, cur_domains, constraints, constraint_list, (new_x, new_y), forward_check)
                 
-                ## If it has solution, return it
-                if res is not None:
-                    return res, node_num
+            ## If it has solution, return it
+            if res is not None:
+                return res
                 
-                ## Go back to previous status
-                cur_domains[(new_x, new_y)][1] = True
-                cur_board[new_y][new_x] = 0
+            ## Go back to previous status
+            cur_domains[(new_x, new_y)][1] = True
+            cur_board[new_y][new_x] = 0
 
     ## Reverse the changed by forward checking
-    if forward_check:
+    if changed_node is not None and forward_check:
         utils.reverse_domain_hist(cur_domains, history)
     
-    return None, node_num
+    return None
 
-def Degree(cur_board, cur_domains, constraints, constraint_list, changed_node, forward_check, node_num):
+def Degree(cur_board, cur_domains, constraints, constraint_list, changed_node, forward_check):
+    global expanded_node_cnt
+    
     ## Do forward checking, only check the constraints which affect changed node
     if changed_node is not None and forward_check:
         check_res, history = utils.check_avail(cur_board, cur_domains, constraints[changed_node])
@@ -109,7 +121,7 @@ def Degree(cur_board, cur_domains, constraints, constraint_list, changed_node, f
         ## If checking fail, reverse the changed domain, and back to previous node
         if not check_res:
             utils.reverse_domain_hist(cur_domains, history)
-            return None, node_num
+            return None
     
     ## If all domains has assigned (reach the leaf), check whether it's acceptable
     ## If failed, reverse and go back to previous node
@@ -118,54 +130,54 @@ def Degree(cur_board, cur_domains, constraints, constraint_list, changed_node, f
         if not utils.check_accept(cur_board, constraint_list):
             if forward_check:
                 utils.reverse_domain_hist(cur_domains, history)
-            return None, node_num
+            return None
         else:
-            return cur_board, node_num
+            return cur_board
 
-    ## calculate the constrain number for every non-assigned node, and sort it in decreasing order
-    priority_seq = []
+    ## Choose the node to expand which has maximum constraint number
+    new_node, max_constraint_num = None, -1
     for (new_x, new_y) in cur_domains.keys():
         if not cur_domains[(new_x, new_y)][1]:
             continue
         constraint_num = len(constraints[(new_x, new_y)])
-        priority_seq.append(((new_x, new_y), constraint_num))
-    priority_seq = sorted(priority_seq, key=lambda x: x[1])
-    priority_seq.reverse()
+        if constraint_num > max_constraint_num:
+            new_node, max_constraint_num = (new_x, new_y), constraint_num
 
-    ## Expand nodes in priority sequence
-    for node in priority_seq:
-        (new_x, new_y) = node[0]
-        domain, _ = cur_domains[(new_x, new_y)]
-        for new_val, available in enumerate(domain):
-            ## If the domain value is available
-            if available:
-                cur_domains[(new_x, new_y)][1] = False
-                cur_board[new_y][new_x] = new_val
-                res, node_num = Degree(cur_board, cur_domains, constraints, constraint_list, (new_x, new_y), forward_check, node_num+1)
+    ## Expand the node
+    expanded_node_cnt += 1
+    (new_x, new_y) = new_node
+    domain, _ = cur_domains[(new_x, new_y)]
+    for new_val, available in enumerate(domain):
+        ## If the domain value is available
+        if available:
+            cur_domains[(new_x, new_y)][1] = False
+            cur_board[new_y][new_x] = new_val
+            res = Degree(cur_board, cur_domains, constraints, constraint_list, (new_x, new_y), forward_check)
                 
-                ## If it has solution, return it
-                if res is not None:
-                    return res, node_num
+            ## If it has solution, return it
+            if res is not None:
+                return res
                 
-                ## Go back to previous status
-                cur_domains[(new_x, new_y)][1] = True
-                cur_board[new_y][new_x] = 0
+            ## Go back to previous status
+            cur_domains[(new_x, new_y)][1] = True
+            cur_board[new_y][new_x] = 0
 
     ## Reverse the changed by forward checking
-    if forward_check:
+    if changed_node is not None and forward_check:
         utils.reverse_domain_hist(cur_domains, history)
     
-    return None, node_num
+    return None
 
-def LCV(cur_board, cur_domains, constraints, constraint_list, changed_node, forward_check, node_num):
+def LCV(cur_board, cur_domains, constraints, constraint_list, changed_node, forward_check):
+    global expanded_node_cnt
     ## Do forward checking, only check the constraints which affect changed node
     if changed_node is not None and forward_check:
         check_res, history = utils.check_avail(cur_board, cur_domains, constraints[changed_node])
-        
+
         ## If checking fail, reverse the changed domain, and back to previous node
         if not check_res:
             utils.reverse_domain_hist(cur_domains, history)
-            return None, node_num
+            return None
     
     ## If all domains has assigned (reach the leaf), check whether it's acceptable
     ## If failed, reverse and go back to previous node
@@ -174,56 +186,61 @@ def LCV(cur_board, cur_domains, constraints, constraint_list, changed_node, forw
         if not utils.check_accept(cur_board, constraint_list):
             if forward_check:
                 utils.reverse_domain_hist(cur_domains, history)
-            return None, node_num
+            return None
         else:
-            return cur_board, node_num
+            return cur_board
 
-    ## calculate the affected number for every non-assigned node assignment, and sort it in increasing order
-    check_rm_history, priority_seq = [], []
-    for (new_x, new_y) in cur_domains.keys():
-        if not cur_domains[(new_x, new_y)][1]:
+    ## Find the node which hasn't assigned
+    for (x, y) in cur_domains.keys():
+        if not cur_domains[(x, y)][1]:
             continue
-        domain, _ = cur_domains[(new_x, new_y)]
-        for new_val, available in enumerate(domain):
-            if available:
-                cur_domains[(new_x, new_y)][1] = False
-                cur_board[new_y][new_x] = new_val
-                can_do, out_cnt = utils.check_avail(
-                    cur_board, cur_domains, constraints[(new_x, new_y)], True
-                )
-                cur_domains[(new_x, new_y)][1] = True
-                cur_board[new_y][new_x] = 0
-                if not can_do:
-                    cur_domains[(new_x, new_y)][0][new_val] = False
-                    check_rm_history.append(((new_x, new_y), new_val))
-                else:
-                    priority_seq.append(((new_x, new_y, new_val), out_cnt))
-    
-    priority_seq = sorted(priority_seq, key=lambda x: x[1])
+        new_x, new_y = x, y
+        break
 
-    ## Expand nodes in priority sequence
-    for node in priority_seq:
-        (new_x, new_y, new_val) = node[0]
-        domain, _ = cur_domains[(new_x, new_y)]
-        
+    value_seq = []
+    if cur_domains[(new_x, new_y)][0][0] and cur_domains[(new_x, new_y)][0][1]:
+        ## sort the value in increasing order
+        cur_domains[(new_x, new_y)][1] = False
+        cur_board[new_y][new_x] = 0
+        zero_can_do, zero_out_cnt = utils.check_avail(
+            cur_board, cur_domains, constraints[(new_x, new_y)], True
+        )
+        cur_board[new_y][new_x] = 1
+        one_can_do, one_out_cnt = utils.check_avail(
+            cur_board, cur_domains, constraints[(new_x, new_y)], True
+        )
+        cur_board[new_y][new_x] = 0
+        cur_domains[(new_x, new_y)][1] = True
+        if zero_can_do and one_can_do:
+            if zero_out_cnt > one_out_cnt:
+                value_seq = [1, 0]
+            else:
+                value_seq = [0, 1]
+        elif zero_can_do:
+            value_seq = [0]
+        elif one_can_do:
+            value_seq = [1]
+    elif cur_domains[(new_x, new_y)][0][0]:
+        value_seq = [0]
+    elif cur_domains[(new_x, new_y)][0][1]:
+        value_seq = [1]
+
+    expanded_node_cnt += 1
+    for new_val in value_seq:
         cur_domains[(new_x, new_y)][1] = False
         cur_board[new_y][new_x] = new_val
-        res, node_num = LCV(cur_board, cur_domains, constraints, constraint_list, (new_x, new_y), forward_check, node_num+1)
-        
+        res = LCV(cur_board, cur_domains, constraints, constraint_list, (new_x, new_y), forward_check)
+                        
         ## If it has solution, return it
         if res is not None:
-            return res, node_num
-        
+            return res
+                        
         ## Go back to previous status
         cur_domains[(new_x, new_y)][1] = True
         cur_board[new_y][new_x] = 0
 
     ## Reverse the changed by forward checking
-    if forward_check:
+    if changed_node is not None and forward_check:
         utils.reverse_domain_hist(cur_domains, history)
-    
-    ## Reverse the changed by priority checking
-    for (x, y), val in check_rm_history:
-        cur_domains[(x, y)][0][val] = True
-
-    return None, node_num
+        
+    return None

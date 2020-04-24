@@ -1,5 +1,8 @@
+## gen_case.py
+
 import random
 
+## Generate random board
 def gen_case(x_size, y_size, mines_num, hint_num):
     board = []
     res = ''
