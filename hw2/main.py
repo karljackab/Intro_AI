@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
     ## Experiment Flags
     forward_check = True
-    heur = 'Degree' ## could be: None, MRV, Degree, LCV
+    heur = 'None' ## could be: None, MRV, Degree, LCV
 
     ## Print board
     utils.print_board(orig_map, board)

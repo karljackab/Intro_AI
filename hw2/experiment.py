@@ -52,7 +52,7 @@ def capacity_testing(version_list, size=8, round_num=5):
 if __name__ == "__main__":
     ## Setting
     x_size, y_size = 6, 6
-    mines_num, hint_num = 10, 16
+    mines_num, hint_num = 10, 8
     round_num = 500
     forward_check = True
     version_list = ['None', 'MRV', 'Degree', 'LCV']
